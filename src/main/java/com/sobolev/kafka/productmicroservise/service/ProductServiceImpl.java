@@ -1,7 +1,8 @@
 package com.sobolev.kafka.productmicroservise.service;
 
 import com.sobolev.kafka.productmicroservise.dto.CreateProductDto;
-import com.sobolev.kafka.productmicroservise.service.event.ProductCreatedEvent;
+import com.sobolev.spring.core.ProductCreatedEvent;
+import org.apache.kafka.clients.producer.ProducerRecord;
 import org.apache.kafka.common.protocol.types.Field;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -32,8 +33,16 @@ public class ProductServiceImpl implements ProductService {
                 createProductDto.getPrice(),
                 createProductDto.getQuantity());
 
+        ProducerRecord<String,ProductCreatedEvent> record = new ProducerRecord<>(
+                "product-created-events-topic",
+                productId,
+                productCreatedEvent
+        );
+
+        record.headers().add("messageId",UUID.randomUUID().toString().getBytes());
+
         CompletableFuture<SendResult<String,ProductCreatedEvent>> future = kafkaTemplate
-                .send("product-created-events-topic", productId, productCreatedEvent);
+                .send(record);
 
         future.whenComplete((result, exception) -> {
             if (exception != null) {
